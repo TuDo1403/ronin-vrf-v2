@@ -3,3 +3,4 @@ contract-libs/=lib/contract-libs/src/
 @vrf/contracts/=./src/
 @chainlink/=node_modules/@chainlink/
 @openzeppelin/=lib/openzeppelin-contracts/
+@pythnetwork/=lib/pyth-sdk-solidity/
