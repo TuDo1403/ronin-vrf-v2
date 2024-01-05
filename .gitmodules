@@ -1,0 +1,9 @@
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "lib/foundry-deployment-kit"]
+	path = lib/foundry-deployment-kit
+	url = https://github.com/axieinfinity/foundry-deployment-kit
+[submodule "lib/contract-libs"]
+	path = lib/contract-libs
+	url = https://github.com/axieinfinity/contract-libs

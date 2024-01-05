@@ -1,0 +1,2 @@
+foundry-deployment-kit/=lib/foundry-deployment-kit/script/
+contract-libs/=lib/contract-libs/src/
