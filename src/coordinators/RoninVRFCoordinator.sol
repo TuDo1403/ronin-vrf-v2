@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { StorageSlot, RequestManager } from "./RequestManager.sol";
 import { OracleManager } from "./OracleManager.sol";
 import { WhitelistConsumer } from "../whitelist/WhitelistConsumer.sol";
@@ -12,7 +13,6 @@ import {
   IRoninVRFCoordinatorForConsumers
 } from "../interfaces/coordinators/IRoninVRFCoordinator.sol";
 import { IBaseVRFConsumer } from "../interfaces/consumers/IBaseVRFConsumer.sol";
-import { LibStatTracking } from "../libraries/LibStatTracking.sol";
 import { LibNativeTransfer } from "contract-libs/transfers/LibNativeTransfer.sol";
 import { LibSLA } from "../libraries/LibSLA.sol";
 import { LibSafeCall } from "../libraries/LibSafeCall.sol";
@@ -26,9 +26,9 @@ contract RoninVRFCoordinator is
   WhitelistConsumer,
   IRoninVRFCoordinator
 {
+  using SafeERC20 for IERC20;
   using LibSafeCall for address;
   using StorageSlot for bytes32;
-  using LibStatTracking for bytes32;
   using LibSLA for LibSLA.RandomRequest;
 
   /**
@@ -134,11 +134,10 @@ contract RoninVRFCoordinator is
     if (estimateRequestRandomFee(callbackGasLimit, gasPrice) > msg.value) revert InsufficientFee();
 
     reqHash = req.hash();
-    bytes32[] memory keyHashesByOrder = _reorderKeyHashesByScore();
-
     _requestHash[consumer][nonce] = reqHash;
+
+    bytes32[] memory keyHashesByOrder = _record.handleRequest({ cfg: _config });
     _requestStatus[reqHash].keyHashesByOrder = keyHashesByOrder;
-    keyHashesByOrder[0].onAssigned({ record: _record, cfg: _config });
 
     emit RandomSeedRequested(reqHash, req, keyHashesByOrder);
   }
@@ -171,7 +170,7 @@ contract RoninVRFCoordinator is
 
     // Update oracles and request data before transfer.
     _requestStatus[reqHash].finalizedBy = oracle;
-    keyhash.onFulfilled({ cfg: _config, record: _record, fulfillOrder: idx, blockElapsed: numBlockSinceRequest });
+    _record.handleFulfill({ fulfiller: keyhash, cfg: _config, fulfillOrder: idx, blockElapsed: numBlockSinceRequest });
 
     // Verifies the proof and generates random seed. Reverts on failure.
     uint256 randomSeed = VRF.randomValueFromVRFProof(proof, proof.seed);

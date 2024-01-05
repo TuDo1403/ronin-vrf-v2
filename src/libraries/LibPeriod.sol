@@ -26,33 +26,41 @@ library LibPeriod {
    * @param currentPeriod The updated current period.
    * @param lastUpdatedAt The timestamp when the period was last updated.
    */
-  event PeriodUpdated(address indexed by, uint256 indexed currentPeriod, uint256 lastUpdatedAt);
+  event NewPeriod(address indexed by, uint128 indexed currentPeriod, uint128 lastUpdatedAt);
 
-  function current(Period storage period) internal view returns (uint256) {
+  function current(Period storage period) internal view returns (uint128) {
     return period._currentPeriod;
+  }
+
+  function updatedAt(Period storage period) internal view returns (uint128) {
+    return period._lastUpdatedAt;
+  }
+
+  function nextPeriodStartAt(Period storage period, uint256 periodDuration) internal view returns (uint256) {
+    return updatedAt(period) + periodDuration;
   }
 
   /**
    * @dev Tries to update the current period based on the provided timestamp.
    * @param period The storage reference to the Period struct.
-   * @param current The current timestamp.
+   * @param currentTimestamp The current timestamp.
    * @param periodDuration The duration of each period.
    * @return updated True if the period was successfully updated, false otherwise.
    * @return currentPeriod The updated current period.
    */
-  function tryUpdate(Period storage period, uint256 current, uint256 periodDuration)
+  function tryUpdate(Period storage period, uint256 currentTimestamp, uint256 periodDuration)
     internal
-    returns (bool updated, uint256 currentPeriod)
+    returns (bool updated, uint128 currentPeriod)
   {
     unchecked {
-      currentPeriod = period._currentPeriod;
-      uint256 lastUpdatedAt = period._lastUpdatedAt;
-      if (current < lastUpdatedAt + periodDuration) return (false, currentPeriod);
+      currentPeriod = current(period);
+      uint128 lastUpdatedAt = updatedAt(period);
+      if (currentTimestamp < lastUpdatedAt + periodDuration) return (false, currentPeriod);
+      currentPeriod += ((currentTimestamp - lastUpdatedAt) / periodDuration).toUint128();
 
-      period._lastUpdatedAt = current.toUint128();
-      currentPeriod = (current - lastUpdatedAt) / periodDuration;
-      period._currentPeriod = currentPeriod.toUint128();
-      emit PeriodUpdated(msg.sender, currentPeriod, current);
+      period._currentPeriod = currentPeriod;
+      period._lastUpdatedAt = currentTimestamp.toUint128();
+      emit NewPeriod(msg.sender, currentPeriod, currentTimestamp.toUint128());
 
       return (true, currentPeriod);
     }

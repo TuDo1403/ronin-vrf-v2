@@ -8,8 +8,6 @@ import { LibArray } from "../libraries/LibArray.sol";
 import { Record, Config } from "../libraries/LibStatTracking.sol";
 
 abstract contract OracleManager is Initializable, Ownable, IOracleManagerExtended {
-  using LibArray for *;
-
   /// @dev mapping from key hash to oracle status
   mapping(bytes32 keyHash => Oracle oracle) internal _oracleInfo;
   /// @dev mapping from oracle address to key hash
@@ -86,23 +84,7 @@ abstract contract OracleManager is Initializable, Ownable, IOracleManagerExtende
    * @inheritdoc IOracleManagerExtended
    */
   function getAllKeyHashes() public view returns (bytes32[] memory keyHashes) {
-    uint256 length = _record.keyHashes.length;
-    if (length == 1) return keyHashes;
-    keyHashes = new bytes32[](length);
-    uint256 count;
-    bytes32 keyHash;
-
-    for (uint256 i; i < length; ++i) {
-      keyHash = _record.keyHashes[i];
-      unchecked {
-        if (keyHash != bytes32(0x0)) keyHashes[count++] = keyHash;
-      }
-    }
-
-    // resize array
-    assembly ("memory-safe") {
-      mstore(keyHashes, count)
-    }
+    keyHashes = _record.getAllKeyHashes();
   }
 
   /**
@@ -239,16 +221,5 @@ abstract contract OracleManager is Initializable, Ownable, IOracleManagerExtende
    */
   function _requireNonEmptyArray(bytes32[] calldata arr) internal pure {
     if (arr.length == 0) revert InvalidArrayLength();
-  }
-
-  function _reorderKeyHashesByScore() internal view returns (bytes32[] memory reordered) {
-    bytes32[] memory allKeyHashes = getAllKeyHashes();
-    uint256[] memory scores = new uint256[](allKeyHashes.length);
-
-    for (uint256 i; i < scores.length; ++i) {
-      scores[i] = _record.stat[allKeyHashes[i]].score;
-    }
-
-    reordered = allKeyHashes.toUint256s().inlineQuickSortByValue({ values: scores }).toBytes32s();
   }
 }
